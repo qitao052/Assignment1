@@ -1,17 +1,60 @@
 Assignment 1(Reproducible Research)
 ========================================================
+Loading and preprocessing the data
+```{r,cache=TRUE}
+data=read.csv('./data//activity.csv',head=T)
+dates=unique(data$date)
+data$interval=as.character(data$interval)
+intes=unique(data$interval)
+data_m = matrix(NA,ncol=length(dates),nrow=length(intes),
+                dimnames=list(intes,dates))
+for (i in 1:nrow(data)){
+  datei = data[i,'date']
+  intei = data[i,'interval']
+  data_m[intei,datei]=data[i,'steps']
+}
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring web pages (click the **Help** toolbar button for more details on using R Markdown).
-
-When you click the **Knit HTML** button a web page will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
+```
+What is mean total number of steps taken per day?
 ```{r}
-summary(cars)
+totals=apply(data_m,2,sum,na.rm=T)
+hist(totals,xlab=NULL,main='Histogram of the total number of steps taken each day')
+apply(data_m,2,mean,na.rm=T)
+apply(data_m,2,median,na.rm=T)
 ```
-
-You can also embed plots, for example:
-
-```{r fig.width=7, fig.height=6}
-plot(cars)
+What is the average daily activity pattern?
+```{r}
+activity_day = apply(data_m,1,mean,na.rm=T)
+plot(as.numeric(rownames(data_m)),activity_day,type='l',
+     xlab='5-minute interval',
+     ylab='the average number of steps taken')
+result_max=which.max(activity_day)
+result_max=round(activity_day[result_max],digits=3)
+paste('the interval:',names(result_max),'(with the max average number of steps:',result_max,')',sep=' ')
 ```
-
+Imputing missing values
+```{r}
+sum(is.na(data$steps))
+for (i in 1:nrow(data_m)){
+  data_m[i,]=ifelse(is.na(data_m[i,]),mean(data_m[i,],na.rm=T),data_m[i,])
+}
+toals=apply(data_m,2,sum)
+hist(totals,xlab=NULL,main='Histogram of the total number of steps taken each day')
+apply(data_m,2,mean)
+apply(data_m,2,median)
+```
+Are there differences in activity patterns between weekdays and weekends?
+```{r}
+day_define=as.POSIXlt(colnames(data_m))
+day_define=weekdays(day_define)
+weekends=c("ÐÇÆÚÁù","ÐÇÆÚÈÕ")
+day_define=ifelse(day_define%in%weekends,'weekend','weekday')
+weekday_data=data_m[,day_define=='weekday']
+weekend_data=data_m[,day_define=='weekend']
+weekday_average=apply(weekday_data,1,mean)
+weekend_average=apply(weekend_data,1,mean)
+x=as.numeric(rownames(data_m))
+par(mfrow=c(2,1))
+plot(x,weekday_average,xlab='interval',ylab='Number of steps',main='weekday',type='l')
+plot(x,weekend_average,xlab='interval',ylab='Number of steps',main='weekend',type='l')
+```
